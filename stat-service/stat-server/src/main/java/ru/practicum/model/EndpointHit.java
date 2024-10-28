@@ -16,7 +16,8 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "endpoints")
-@Getter @Setter
+@Getter
+@Setter
 @NoArgsConstructor
 @ToString
 public class EndpointHit {

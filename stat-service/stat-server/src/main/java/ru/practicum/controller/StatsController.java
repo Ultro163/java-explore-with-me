@@ -19,7 +19,7 @@ public class StatsController {
 
     @PostMapping("/hit")
     @ResponseStatus(HttpStatus.CREATED)
-    public void create(@Valid @RequestBody EndpointHitDto dto) {
-        endpointHitServiceImpl.create(endpointHitMapper.toEntity(dto));
+    public void save(@Valid @RequestBody EndpointHitDto dto) {
+        endpointHitServiceImpl.save(endpointHitMapper.toEntity(dto));
     }
 }

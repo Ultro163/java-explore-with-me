@@ -13,7 +13,7 @@ public class EndpointHitServiceImpl implements EndpointHitService {
     private final EndpointHitRepository endpointHitRepository;
 
     @Override
-    public void create(EndpointHit endpointHit) {
+    public void save(EndpointHit endpointHit) {
         log.info("Create Endpoint Hit {}", endpointHit);
         EndpointHit resultEndpointHit = endpointHitRepository.save(endpointHit);
         log.info("Endpoint Hit created {}", resultEndpointHit);
