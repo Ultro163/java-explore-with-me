@@ -28,3 +28,12 @@ services:
       timeout: 5s
       interval: 5s
       retries: 10
+
+  main-service:
+    build: main-service
+    image: main-service
+    container_name: main-service
+    ports:
+      - "8080:8080"
+    environment:
+      - MY_SERVER_URL=http://stat-server:9090

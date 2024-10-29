@@ -30,6 +30,7 @@ public class StatClient {
     public void save(String app, HttpServletRequest request) {
         log.info("Saving hit for app: {}", app);
         EndpointHitDto dto = getDto(app, request);
+        log.info("Start create request for stat-service");
         ResponseEntity<Void> response = client.post()
                 .uri("/hit")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -52,10 +53,12 @@ public class StatClient {
                 .onStatus(HttpStatusCode::is4xxClientError,
                         ((request, response) -> log.error("Getting stats for {} with error code {}", uris,
                                 response.getStatusCode())))
-                .body(new ParameterizedTypeReference<>() {});
+                .body(new ParameterizedTypeReference<>() {
+                });
     }
 
     private EndpointHitDto getDto(String app, HttpServletRequest request) {
+        log.info("Start the build dto for the app {}", app);
         return EndpointHitDto.builder()
                 .app(app)
                 .uri(request.getRequestURI())
