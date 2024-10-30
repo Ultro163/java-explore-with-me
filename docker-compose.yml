@@ -1,14 +1,39 @@
 services:
-  stats-server:
+  stat-server:
+    build: stat-service/stat-server
+    image: stat-server
+    container_name: stat-server
     ports:
       - "9090:9090"
+    depends_on:
+      - stat-db
+    environment:
+      - TZ=Europe/Samara
+      - PGTZ=Europe/Samara
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://stat-db:5432/statistic
+      - SPRING_DATASOURCE_USERNAME=ultro
+      - SPRING_DATASOURCE_PASSWORD=163163
 
-  stats-db:
+  stat-db:
     image: postgres:16.1
+    container_name: postgres-stat
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=163163
+      - POSTGRES_USER=ultro
+      - POSTGRES_DB=statistic
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
 
-  ewm-service:
+  main-service:
+    build: main-service
+    image: main-service
+    container_name: main-service
     ports:
       - "8080:8080"
-
-  ewm-db:
-    image: postgres:16.1
+    environment:
+      - MY_SERVER_URL=http://stat-server:9090
