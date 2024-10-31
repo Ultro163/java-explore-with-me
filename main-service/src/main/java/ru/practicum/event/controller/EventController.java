@@ -1,10 +1,11 @@
-package ru.practicum.category.controller;
+package ru.practicum.event.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/categories")
-public class CategoryPublicController {
+@RequestMapping("/evemt")
+public class EventController {
 
 }
+

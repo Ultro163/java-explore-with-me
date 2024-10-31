@@ -9,5 +9,4 @@ public interface CategoryMapper {
     Category toEntity(CategoryDto categoryDto);
 
     CategoryDto toDto(Category category);
-
 }
