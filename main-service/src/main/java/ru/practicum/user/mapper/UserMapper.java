@@ -2,6 +2,7 @@ package ru.practicum.user.mapper;
 
 import org.mapstruct.Mapper;
 import ru.practicum.user.dto.UserDto;
+import ru.practicum.user.dto.UserRequestDto;
 import ru.practicum.user.dto.UserShortDto;
 import ru.practicum.user.model.User;
 
@@ -12,4 +13,6 @@ public interface UserMapper {
     UserDto toDto(User user);
 
     UserShortDto toShortDto(User user);
+
+    User toEntity(UserRequestDto userRequestDto);
 }
