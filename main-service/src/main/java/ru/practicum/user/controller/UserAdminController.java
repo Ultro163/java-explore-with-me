@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.user.dto.UserDto;
 import ru.practicum.user.dto.UserRequestDto;
-import ru.practicum.user.mapper.UserMapper;
+import ru.practicum.user.dto.mapper.UserMapper;
 import ru.practicum.user.model.User;
 import ru.practicum.user.service.UserService;
 
@@ -35,10 +35,10 @@ public class UserAdminController {
     }
 
     @GetMapping
-    public List<UserDto> getUsersWithParams(@RequestParam(required = false) List<Integer> ids,
-                                            @RequestParam(defaultValue = "0") int from,
-                                            @RequestParam(defaultValue = "10") int size) {
-        return userServiceImpl.getUsersWithParams(ids, from, size).stream().map(mapper::toDto).toList();
+    public List<UserDto> findUsersWithPagination(@RequestParam(required = false) List<Integer> ids,
+                                                 @RequestParam(defaultValue = "0") int from,
+                                                 @RequestParam(defaultValue = "10") int size) {
+        return userServiceImpl.findUsersWithPagination(ids, from, size).stream().map(mapper::toDto).toList();
     }
 
     @DeleteMapping("/{userId}")

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.error.exception.EntityNotFoundException;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
@@ -29,12 +30,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<User> getUsersWithParams(List<Integer> ids, int from, int size) {
+    public List<User> findUsersWithPagination(List<Integer> ids, int from, int size) {
         log.info("Getting users with params");
         if (ids == null || ids.isEmpty()) {
             log.info("Get users with offset from {}, size {}", from, size);
             Pageable pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "id"));
-            return userRepository.findAllUsersWithPagination(pageable);
+            return userRepository.findAll(pageable).getContent();
         } else {
             log.info("Get users with ids {}", ids);
             return userRepository.findByIds(ids);
@@ -46,6 +47,16 @@ public class UserServiceImpl implements UserService {
         log.info("Deleting user with ID = {}", userId);
         userRepository.deleteById(userId);
         log.info("Deleted user with ID = {}", userId);
+    }
+
+    @Override
+    public User getUserById(long userId) {
+        log.info("Getting user with ID = {}", userId);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User with ID {} not found", userId);
+                    return new EntityNotFoundException("User with ID " + userId + " not found");
+                });
     }
 
     private Pageable createPageable(int from, int size, Sort sort) {

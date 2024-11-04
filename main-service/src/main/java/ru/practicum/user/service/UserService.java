@@ -8,7 +8,9 @@ public interface UserService {
 
     User creat(User dto);
 
-    List<User> getUsersWithParams(List<Integer> ids, int from, int size);
+    List<User> findUsersWithPagination(List<Integer> ids, int from, int size);
 
     void delete(long userId);
+
+    User getUserById(long userId);
 }

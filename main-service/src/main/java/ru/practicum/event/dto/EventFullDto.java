@@ -1,34 +1,32 @@
 package ru.practicum.event.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import ru.practicum.category.dto.CategoryDto;
+import ru.practicum.event.model.State;
 import ru.practicum.user.dto.UserShortDto;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class EventDto {
-    @NotNull
+public class EventFullDto {
     private Long id;
-    @NotNull
     private String annotation;
-    @NotNull
     private CategoryDto category;
-    private Integer confirmedRequest;
-    @NotNull
-    private OffsetDateTime eventDate;
-    @NotNull
+    private Integer confirmedRequests;
+    private LocalDateTime createdOn;
+    private String description;
+    private LocalDateTime eventDate;
     private UserShortDto initiator;
-    @NotNull
+    private LocationDto location;
     private Boolean paid;
-    @NotNull
-    @NotBlank
+    private Integer participantLimit;
+    private LocalDateTime publishedOn;
+    private Boolean requestModeration;
+    private State state;
     private String title;
     private Integer views;
 }
