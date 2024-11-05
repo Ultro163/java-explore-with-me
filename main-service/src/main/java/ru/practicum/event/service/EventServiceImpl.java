@@ -1,17 +1,21 @@
 package ru.practicum.event.service;
 
+import com.querydsl.core.BooleanBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatClient;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.service.CategoryService;
 import ru.practicum.error.exception.AccessDeniedException;
 import ru.practicum.error.exception.EntityNotFoundException;
 import ru.practicum.error.exception.InvalidStateException;
+import ru.practicum.error.exception.ValidationException;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
@@ -29,9 +33,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static ru.practicum.event.model.QEvent.event;
+
 @Slf4j
 @RequiredArgsConstructor
 @Service
+@Transactional
 public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final LocationRepository locationRepository;
@@ -122,6 +129,49 @@ public class EventServiceImpl implements EventService {
             throw new EntityNotFoundException("Event with id " + eventId + "for userId " + userId + " not found");
         }
         return eventMapper.toDto(event);
+    }
+
+    @Override
+    public List<EventFullDto> getFullEventsForAdmin(List<Long> userIds, List<State> states, List<Long> categories,
+                                                    LocalDateTime rangeStart, LocalDateTime rangeEnd,
+                                                    int from, int size) {
+
+        log.info("Getting full events for admin with parameters: userIds={}, states={}, categories={}, rangeStart={}, rangeEnd={}, from={}, size={}",
+                userIds, states, categories, rangeStart, rangeEnd, from, size);
+        Page<Event> eventPage;
+        Pageable pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "createdOn"));
+        BooleanBuilder queryBuilder = new BooleanBuilder();
+
+
+        if (rangeStart != null && rangeEnd != null) {
+            if (rangeStart.isAfter(rangeEnd)) {
+                throw new ValidationException("Start time must be not after end time");
+            }
+            queryBuilder.and(event.eventDate.between(rangeStart, rangeEnd));
+        } else if (rangeStart == null && rangeEnd != null) {
+            queryBuilder.and(event.eventDate.before(rangeEnd));
+        } else if (rangeStart != null) {
+            queryBuilder.and(event.eventDate.after(rangeStart));
+        }
+
+        if (userIds != null && !userIds.isEmpty()) {
+            queryBuilder.and(event.initiator.id.in(userIds));
+        }
+        if (categories != null && !categories.isEmpty()) {
+            queryBuilder.and(event.category.id.in(categories));
+        }
+        if (states != null && !states.isEmpty()) {
+            queryBuilder.and(event.state.in(states));
+        }
+
+        if (queryBuilder.getValue() != null) {
+            eventPage = eventRepository.findAll(queryBuilder, pageable);
+        } else {
+            eventPage = eventRepository.findAll(pageable);
+        }
+        List<Event> result = eventPage.getContent();
+
+        return result.stream().map(eventMapper::toDto).toList();
     }
 
     private Event findEventById(long eventId) {

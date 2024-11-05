@@ -34,7 +34,8 @@ public class UserServiceImpl implements UserService {
         log.info("Getting users with params");
         if (ids == null || ids.isEmpty()) {
             log.info("Get users with offset from {}, size {}", from, size);
-            Pageable pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "id"));
+            log.debug("Create Pageable with offset from {}, size {}", from, size);
+            Pageable pageable = PageRequest.of(from, size, Sort.by(Sort.Direction.ASC, "id"));
             return userRepository.findAll(pageable).getContent();
         } else {
             log.info("Get users with ids {}", ids);
@@ -57,10 +58,5 @@ public class UserServiceImpl implements UserService {
                     log.warn("User with ID {} not found", userId);
                     return new EntityNotFoundException("User with ID " + userId + " not found");
                 });
-    }
-
-    private Pageable createPageable(int from, int size, Sort sort) {
-        log.debug("Create Pageable with offset from {}, size {}", from, size);
-        return PageRequest.of(from / size, size, sort);
     }
 }
