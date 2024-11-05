@@ -1,5 +1,6 @@
 package ru.practicum.user.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import ru.practicum.user.model.User;
@@ -14,5 +15,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
             where u.id in :ids
             order by u.id asc
             """)
-    List<User> findByIds(List<Integer> ids);
+    List<User> findByIds(List<Integer> ids, Pageable pageable);
 }

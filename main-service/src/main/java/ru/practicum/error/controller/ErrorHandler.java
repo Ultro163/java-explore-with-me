@@ -1,6 +1,7 @@
 package ru.practicum.error.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -68,15 +69,31 @@ public class ErrorHandler {
                 .build();
     }
 
-    @ExceptionHandler
+    @ExceptionHandler({DataIntegrityViolationException.class, InvalidStateException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
-    public ApiError handleNotFound(final InvalidStateException e) {
+    public ApiError handleNotFound(final Exception e) {
         log.warn(e.getMessage());
+        String errorMessage;
         List<String> errors = new ArrayList<>();
+        String reason;
+
+        if (e instanceof DataIntegrityViolationException ex) {
+            errorMessage = "Data integrity violation occurred";
+            reason = "DataIntegrityViolationException";
+            errors.add(ex.getMostSpecificCause().getMessage());
+        } else if (e instanceof InvalidStateException ex) {
+            errorMessage = ex.getMessage();
+            reason = "InvalidStateException";
+            errors.add(ex.getLocalizedMessage());
+        } else {
+            errorMessage = "Conflict error occurred";
+            reason = "ConflictException";
+        }
+
         return ApiError.builder()
                 .errors(errors)
-                .message(e.getMessage())
-                .reason("InvalidStateException")
+                .message(errorMessage)
+                .reason(reason)
                 .status(HttpStatus.CONFLICT.name())
                 .timestamp(LocalDateTime.now())
                 .build();

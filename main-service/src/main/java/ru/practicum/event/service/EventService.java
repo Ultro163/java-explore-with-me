@@ -3,6 +3,7 @@ package ru.practicum.event.service;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
+import ru.practicum.event.dto.UpdateEventAdminRequest;
 import ru.practicum.event.dto.UpdateEventUserRequest;
 import ru.practicum.event.model.State;
 
@@ -21,4 +22,6 @@ public interface EventService {
 
     List<EventFullDto> getFullEventsForAdmin(List<Long> userIds, List<State> states, List<Long> categories,
                                              LocalDateTime rangeStart, LocalDateTime rangeEnd, int from, int size);
+
+    EventFullDto updateEventFromAdmin(long eventId, UpdateEventAdminRequest dto);
 }

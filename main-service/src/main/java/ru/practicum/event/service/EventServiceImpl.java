@@ -19,6 +19,7 @@ import ru.practicum.error.exception.ValidationException;
 import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
+import ru.practicum.event.dto.UpdateEventAdminRequest;
 import ru.practicum.event.dto.UpdateEventUserRequest;
 import ru.practicum.event.dto.mapper.EventMapper;
 import ru.practicum.event.model.Event;
@@ -69,9 +70,13 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventFullDto updateTheEventByTheUser(long userId, long eventId, UpdateEventUserRequest dto) {
-        log.info("Updating event {}", dto);
+        log.info("Updating event from user with Id {} ", eventId);
         User user = checkUserExist(userId);
         Event event = findEventById(eventId);
+        if (event.getState() == State.PUBLISHED) {
+            log.warn("Event with id {} is already published. Cannot perform this operation.", event.getId());
+            throw new InvalidStateException("Event has already been published");
+        }
         if (dto.getStateAction() != null) {
             switch (dto.getStateAction()) {
                 case CANCEL_REVIEW -> event.setState(State.CANCELED);
@@ -79,33 +84,14 @@ public class EventServiceImpl implements EventService {
                 default -> throw new InvalidStateException("Invalid state action");
             }
         }
-        if (user.getId().equals(event.getInitiator().getId())) {
+        if (!user.getId().equals(event.getInitiator().getId())) {
             log.warn("User id {} is the dont same as initiator", userId);
             throw new AccessDeniedException("You do not have permission to update this event");
         }
-        if (event.getState() == State.PUBLISHED) {
-            log.warn("Event with id {} is already published. Cannot perform this operation.", event.getId());
-            throw new InvalidStateException("Event has already been published");
-        }
-        if (dto.getCategoryId() != null) {
-            Category category = categoryService.getCategoryById(dto.getCategoryId());
-            event.setCategory(category);
-        }
-        if (dto.getLocation() != null) {
-            Location location = locationRepository.save(dto.getLocation());
-            event.setLocation(location);
-        }
-
-        Optional.ofNullable(dto.getAnnotation()).ifPresent(event::setAnnotation);
-        Optional.ofNullable(dto.getDescription()).ifPresent(event::setDescription);
-        Optional.ofNullable(dto.getEventDate()).ifPresent(event::setEventDate);
-        Optional.ofNullable(dto.getPaid()).ifPresent(event::setPaid);
-        Optional.ofNullable(dto.getParticipantLimit()).ifPresent(event::setParticipantLimit);
-        Optional.ofNullable(dto.getRequestModeration()).ifPresent(event::setRequestModeration);
-        Optional.ofNullable(dto.getTitle()).ifPresent(event::setTitle);
-
-        Event savedEvent = eventRepository.save(event);
-        log.info("Event {} updated", savedEvent);
+        Event savedEvent = updateEvent(event, dto.getCategoryId(), dto.getLocation(), dto.getAnnotation(),
+                dto.getDescription(), dto.getEventDate(), dto.getPaid(), dto.getParticipantLimit(),
+                dto.getRequestModeration(), dto.getTitle());
+        log.info("Event {} updated from user", savedEvent);
         return eventMapper.toDto(savedEvent);
     }
 
@@ -136,7 +122,8 @@ public class EventServiceImpl implements EventService {
                                                     LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                                     int from, int size) {
 
-        log.info("Getting full events for admin with parameters: userIds={}, states={}, categories={}, rangeStart={}, rangeEnd={}, from={}, size={}",
+        log.info("Getting full events for admin with parameters: " +
+                        "userIds={}, states={}, categories={}, rangeStart={}, rangeEnd={}, from={}, size={}",
                 userIds, states, categories, rangeStart, rangeEnd, from, size);
         Page<Event> eventPage;
         Pageable pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "createdOn"));
@@ -172,6 +159,60 @@ public class EventServiceImpl implements EventService {
         List<Event> result = eventPage.getContent();
 
         return result.stream().map(eventMapper::toDto).toList();
+    }
+
+    @Override
+    public EventFullDto updateEventFromAdmin(long eventId, UpdateEventAdminRequest adminDto) {
+        log.info("Updating event from admin with Id {} ", eventId);
+        Event event = findEventById(eventId);
+        if (event.getState() != State.PENDING) {
+            log.warn("Event with id {} is not state pending. Cannot perform this operation.", event.getId());
+            throw new InvalidStateException("Event has already been published");
+        }
+
+        if (adminDto.getEventDate() != null
+                && adminDto.getEventDate().isBefore(event.getPublishedOn().plusHours(1))) {
+            throw new ValidationException("The start time of the event to be modified must be no earlier than one hour" +
+                    " from the date of publication");
+        }
+
+        if (adminDto.getStateAction() != null) {
+            switch (adminDto.getStateAction()) {
+                case PUBLISH_EVENT -> event.setState(State.PUBLISHED);
+                case REJECT_EVENT -> event.setState(State.CANCELED);
+                default -> throw new InvalidStateException("Invalid state action");
+            }
+        }
+
+        Event savedEvent = updateEvent(event, adminDto.getCategoryId(), adminDto.getLocation(), adminDto.getAnnotation(),
+                adminDto.getDescription(), adminDto.getEventDate(), adminDto.getPaid(), adminDto.getParticipantLimit(),
+                adminDto.getRequestModeration(), adminDto.getTitle());
+
+        log.info("Event {} updated from admin", savedEvent);
+        return eventMapper.toDto(savedEvent);
+    }
+
+    private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String description,
+                              LocalDateTime eventDate, Boolean paid, Integer participantLimit,
+                              Boolean requestModeration, String title) {
+        if (categoryId != null) {
+            Category category = categoryService.getCategoryById(categoryId);
+            event.setCategory(category);
+        }
+        if (location != null) {
+            Location newLocation = locationRepository.save(location);
+            event.setLocation(newLocation);
+        }
+
+        Optional.ofNullable(annotation).ifPresent(event::setAnnotation);
+        Optional.ofNullable(description).ifPresent(event::setDescription);
+        Optional.ofNullable(eventDate).ifPresent(event::setEventDate);
+        Optional.ofNullable(paid).ifPresent(event::setPaid);
+        Optional.ofNullable(participantLimit).ifPresent(event::setParticipantLimit);
+        Optional.ofNullable(requestModeration).ifPresent(event::setRequestModeration);
+        Optional.ofNullable(title).ifPresent(event::setTitle);
+
+        return eventRepository.save(event);
     }
 
     private Event findEventById(long eventId) {

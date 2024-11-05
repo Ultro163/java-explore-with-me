@@ -8,6 +8,7 @@ import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.LocationDto;
 import ru.practicum.event.dto.NewEventDto;
+import ru.practicum.event.dto.UpdateEventAdminRequest;
 import ru.practicum.event.model.Event;
 import ru.practicum.event.model.Location;
 import ru.practicum.user.dto.mapper.UserMapper;
@@ -32,4 +33,8 @@ public interface EventMapper {
 
     @InheritInverseConfiguration(name = "toEntity")
     EventShortDto toShortDto(Event event);
+
+    @Mapping(source = "categoryId", target = "category.id")
+    Event toEntity(UpdateEventAdminRequest updateEventAdminRequest);
+
 }
