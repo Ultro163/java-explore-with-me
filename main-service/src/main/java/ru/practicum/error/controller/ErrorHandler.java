@@ -8,8 +8,10 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.practicum.error.exception.DuplicateParticipationRequestException;
 import ru.practicum.error.exception.EntityNotFoundException;
 import ru.practicum.error.exception.InvalidStateException;
+import ru.practicum.error.exception.SelfParticipationException;
 import ru.practicum.error.exception.ValidationException;
 import ru.practicum.error.model.ApiError;
 
@@ -69,7 +71,8 @@ public class ErrorHandler {
                 .build();
     }
 
-    @ExceptionHandler({DataIntegrityViolationException.class, InvalidStateException.class})
+    @ExceptionHandler({DataIntegrityViolationException.class, InvalidStateException.class,
+            SelfParticipationException.class, DuplicateParticipationRequestException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleNotFound(final Exception e) {
         log.warn(e.getMessage());
@@ -77,17 +80,30 @@ public class ErrorHandler {
         List<String> errors = new ArrayList<>();
         String reason;
 
-        if (e instanceof DataIntegrityViolationException ex) {
-            errorMessage = "Data integrity violation occurred";
-            reason = "DataIntegrityViolationException";
-            errors.add(ex.getMostSpecificCause().getMessage());
-        } else if (e instanceof InvalidStateException ex) {
-            errorMessage = ex.getMessage();
-            reason = "InvalidStateException";
-            errors.add(ex.getLocalizedMessage());
-        } else {
-            errorMessage = "Conflict error occurred";
-            reason = "ConflictException";
+        switch (e) {
+            case DataIntegrityViolationException ex -> {
+                errorMessage = "Data integrity violation occurred";
+                reason = "DataIntegrityViolationException";
+                errors.add(ex.getMostSpecificCause().getMessage());
+            }
+            case InvalidStateException ex -> {
+                errorMessage = ex.getMessage();
+                reason = "InvalidStateException";
+                errors.add(ex.getLocalizedMessage());
+            }
+            case SelfParticipationException ex -> {
+                errorMessage = ex.getMessage();
+                reason = "SelfParticipationException";
+                errors.add("Attempted participation in own event");
+            }
+            case DuplicateParticipationRequestException ex -> {
+                errorMessage = ex.getMessage();
+                reason = "DuplicateParticipationRequestException";
+            }
+            default -> {
+                errorMessage = "Conflict error occurred";
+                reason = "ConflictException";
+            }
         }
 
         return ApiError.builder()

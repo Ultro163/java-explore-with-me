@@ -198,6 +198,9 @@ public class EventServiceImpl implements EventService {
                                                                Boolean paid, LocalDateTime rangeStart,
                                                                LocalDateTime rangeEnd, boolean onlyAvailable,
                                                                String sort, int from, int size) {
+        log.info("Getting events from public users with parameters:" +
+                        " text={}, paid={}, categories={}, rangeStart={}, rangeEnd={}, onlyAvailable= {}, from={}, size={}",
+                text, paid, categories, rangeStart, rangeEnd, onlyAvailable, from, size);
         Page<Event> eventPage;
         Pageable pageable;
         switch (sort) {
@@ -206,13 +209,8 @@ public class EventServiceImpl implements EventService {
             case "VIEWS" -> pageable = createPageable(from, size,
                     Sort.by(Sort.Direction.ASC, "id"));
             case null -> pageable = createPageable(from, size, Sort.unsorted());
-            default -> throw new ValidationException("Sort is not correct");
+            default -> throw new ValidationException("Sort is not supported");
         }
-//        if (sort.equals("EVENT_DATE")) {
-//            pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "eventDate"));
-//        } else {
-//            pageable = Pageable.unpaged();
-//        }
         BooleanBuilder queryBuilder = new BooleanBuilder();
 
         applyDateRangeFilter(rangeStart, rangeEnd, queryBuilder);
