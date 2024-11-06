@@ -29,7 +29,7 @@ public class StatClient {
     }
 
     public void save(String app, HttpServletRequest request) {
-        log.info("Saving hit for app: {}", app);
+        log.info("Saving hit for app: {} , uri {}", app, request.getRequestURI());
         EndpointHitDto dto = getDto(app, request);
         log.info("Start create request for stat-service");
         ResponseEntity<Void> response = client.post()

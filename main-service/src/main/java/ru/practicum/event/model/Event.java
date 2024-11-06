@@ -83,7 +83,7 @@ public class Event {
     private String title;
 
     @Transient
-    private Integer views;
+    private Long views;
 
     @Override
     public final boolean equals(Object o) {

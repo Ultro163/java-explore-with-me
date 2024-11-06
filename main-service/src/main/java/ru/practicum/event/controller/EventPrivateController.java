@@ -17,7 +17,6 @@ import ru.practicum.event.dto.EventFullDto;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
 import ru.practicum.event.dto.UpdateEventUserRequest;
-import ru.practicum.event.dto.mapper.EventMapper;
 import ru.practicum.event.service.EventService;
 
 import java.util.List;
@@ -28,7 +27,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventPrivateController {
     private final EventService eventService;
-    private final EventMapper mapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -52,7 +50,8 @@ public class EventPrivateController {
     }
 
     @GetMapping("/{eventId}")
-    public EventFullDto getUserFullEventBuId(@PathVariable long userId, @PathVariable long eventId) {
+    public EventFullDto getUserFullEventBuId(@PathVariable long userId,
+                                             @PathVariable long eventId) {
         return eventService.getUserFullEventBuId(userId, eventId);
     }
 }
