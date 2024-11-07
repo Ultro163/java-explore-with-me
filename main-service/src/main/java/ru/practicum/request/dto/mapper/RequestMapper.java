@@ -16,4 +16,5 @@ public interface RequestMapper {
     @InheritInverseConfiguration(name = "toEntity")
     ParticipationRequestDto toDto(Request request);
 
+
 }

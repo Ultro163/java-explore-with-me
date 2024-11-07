@@ -14,10 +14,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.event.dto.EventFullDto;
+import ru.practicum.event.dto.EventRequestStatusUpdateRequest;
+import ru.practicum.event.dto.EventRequestStatusUpdateResult;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
 import ru.practicum.event.dto.UpdateEventUserRequest;
 import ru.practicum.event.service.EventService;
+import ru.practicum.request.dto.ParticipationRequestDto;
 
 import java.util.List;
 
@@ -53,5 +56,19 @@ public class EventPrivateController {
     public EventFullDto getUserFullEventBuId(@PathVariable long userId,
                                              @PathVariable long eventId) {
         return eventService.getUserFullEventBuId(userId, eventId);
+    }
+
+    @PatchMapping("/{eventId}/requests")
+    public EventRequestStatusUpdateResult updateParticipationRequestStatus(@PathVariable long userId,
+                                                                           @PathVariable long eventId,
+                                                                           @Valid @RequestBody
+                                                                           EventRequestStatusUpdateRequest dto) {
+        return eventService.updateParticipationRequestStatus(userId, eventId, dto);
+    }
+
+    @GetMapping("/{eventId}/requests")
+    public List<ParticipationRequestDto> getAllParticipationRequestForUserFromEvent(@PathVariable long userId,
+                                                                                    @PathVariable long eventId) {
+        return eventService.getAllParticipationRequestForUserFromEvent(userId, eventId);
     }
 }

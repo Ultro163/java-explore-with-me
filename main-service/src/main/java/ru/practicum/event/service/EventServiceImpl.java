@@ -18,6 +18,8 @@ import ru.practicum.error.exception.EntityNotFoundException;
 import ru.practicum.error.exception.InvalidStateException;
 import ru.practicum.error.exception.ValidationException;
 import ru.practicum.event.dto.EventFullDto;
+import ru.practicum.event.dto.EventRequestStatusUpdateRequest;
+import ru.practicum.event.dto.EventRequestStatusUpdateResult;
 import ru.practicum.event.dto.EventShortDto;
 import ru.practicum.event.dto.NewEventDto;
 import ru.practicum.event.dto.UpdateEventAdminRequest;
@@ -27,17 +29,25 @@ import ru.practicum.event.model.Event;
 import ru.practicum.event.model.Location;
 import ru.practicum.event.model.State;
 import ru.practicum.event.repository.EventRepository;
-import ru.practicum.request.repositroy.LocationRepository;
+import ru.practicum.event.repository.LocationRepository;
+import ru.practicum.request.dto.ParticipationRequestDto;
+import ru.practicum.request.dto.mapper.RequestMapper;
+import ru.practicum.request.model.Request;
+import ru.practicum.request.model.RequestState;
+import ru.practicum.request.repositroy.RequestRepository;
 import ru.practicum.user.model.User;
 import ru.practicum.user.service.UserService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static ru.practicum.event.model.QEvent.event;
 
@@ -48,7 +58,9 @@ import static ru.practicum.event.model.QEvent.event;
 public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final LocationRepository locationRepository;
+    private final RequestRepository requestRepository;
     private final EventMapper eventMapper;
+    private final RequestMapper requestMapper;
     private final UserService userService;
     private final CategoryService categoryService;
     private final StatClient statClient;
@@ -266,7 +278,72 @@ public class EventServiceImpl implements EventService {
         return eventMapper.toDto(event);
     }
 
-    private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String description,
+    @Override
+    public EventRequestStatusUpdateResult updateParticipationRequestStatus(long userId, long eventId,
+                                                                           EventRequestStatusUpdateRequest dto) {
+        log.info("Update Participation Request Status: eventId= {}, \nlistRequest and status= {}", eventId, dto);
+        checkUserExist(userId);
+        Event event = findEventById(eventId);
+        if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
+            throw new ValidationException("Confirmation of applications is not required");
+        }
+        if (Objects.equals(event.getConfirmedRequests(), event.getParticipantLimit())) {
+            throw new InvalidStateException("Quantity Participant Limit is full");
+        }
+        int quantityParticipantLimit = event.getConfirmedRequests();
+
+        List<Request> participationRequest = requestRepository.findAllByIdIn(dto.getRequestIds());
+        List<Request> confirmedList = new ArrayList<>();
+        List<Request> rejectedList = new ArrayList<>();
+
+        if (dto.getStatus() == RequestState.CONFIRMED) {
+            for (Request request : participationRequest) {
+                if (request.getStatus() == RequestState.PENDING
+                        && quantityParticipantLimit <= event.getParticipantLimit()) {
+                    request.setStatus(RequestState.CONFIRMED);
+                    confirmedList.add(request);
+                    quantityParticipantLimit++;
+                } else {
+                    request.setStatus(RequestState.REJECTED);
+                    rejectedList.add(request);
+                }
+            }
+        } else {
+            for (Request request : participationRequest) {
+                if (request.getStatus() == RequestState.PENDING) {
+                    request.setStatus(RequestState.REJECTED);
+                    rejectedList.add(request);
+                } else if (request.getStatus() == RequestState.CONFIRMED) {
+                    request.setStatus(RequestState.REJECTED);
+                    rejectedList.add(request);
+                }
+            }
+        }
+        event.setConfirmedRequests(Math.min(quantityParticipantLimit, event.getParticipantLimit()));
+
+        List<Request> allRequests = Stream.of(confirmedList, rejectedList)
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+
+        requestRepository.saveAll(allRequests);
+        eventRepository.save(event);
+        EventRequestStatusUpdateResult result = new EventRequestStatusUpdateResult();
+        result.setConfirmedRequests(confirmedList.stream().map(requestMapper::toDto).toList());
+        result.setRejectedRequests(rejectedList.stream().map(requestMapper::toDto).toList());
+
+        return result;
+    }
+
+    @Override
+    public List<ParticipationRequestDto> getAllParticipationRequestForUserFromEvent(long userId, long eventId) {
+        checkUserExist(userId);
+        findEventById(userId);
+        return requestRepository.findAllByEventId(eventId)
+                .stream().map(requestMapper::toDto).toList();
+    }
+
+    private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String
+            description,
                               LocalDateTime eventDate, Boolean paid, Integer participantLimit,
                               Boolean requestModeration, String title) {
         if (categoryId != null) {
@@ -309,7 +386,7 @@ public class EventServiceImpl implements EventService {
     private List<ViewStats> getViews(List<Event> events) {
         List<String> uris = events.stream().map(event -> "/events/" + event.getId()).toList();
         List<ViewStats> viewStats = statClient.getViewStats(LocalDateTime.now().minusYears(30),
-                LocalDateTime.now(), uris, false);
+                LocalDateTime.now(), uris, true);
 
         if (viewStats == null) {
             return Collections.emptyList();

@@ -1,23 +1,21 @@
 package ru.practicum.request.repositroy;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import ru.practicum.request.model.Request;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface RequestRepository extends JpaRepository<Request, Long> {
-    @Query("""
-            select r
-            from Request r
-            left join fetch r.event
-            where r.id != :userId
-            order by r.created
-            """)
-    List<Request> findAllByInitiatorIdNot(long userId);
+
+    List<Request> findAllByRequesterIdAndEventInitiatorIdNot(long requesterId, long initiatorId);
 
     Optional<Request> findByRequesterIdAndEventId(long userId, long eventId);
 
     Optional<Request> findByIdAndRequesterId(long requestId, long userId);
+
+    List<Request> findAllByIdIn(Set<Long> ids);
+
+    List<Request> findAllByEventId(long eventID);
 }

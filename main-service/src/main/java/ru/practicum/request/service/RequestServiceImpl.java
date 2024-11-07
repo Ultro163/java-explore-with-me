@@ -46,19 +46,22 @@ public class RequestServiceImpl implements RequestService {
         int quantityParticipantWithNewRequest = event.getConfirmedRequests() + 1;
         System.out.println(quantityParticipantWithNewRequest);
 
-        if (quantityParticipantWithNewRequest > event.getParticipantLimit()) {
+        if (event.getParticipantLimit() != 0
+                && quantityParticipantWithNewRequest > event.getParticipantLimit()) {
             throw new InvalidStateException("The event has reached the full number of participants");
         }
         Request newRequest = new Request();
         newRequest.setRequester(user);
         newRequest.setEvent(event);
         newRequest.setCreated(LocalDateTime.now());
-        if (!event.getRequestModeration()) {
+        if (!event.getRequestModeration() || event.getParticipantLimit() == 0) {
             newRequest.setStatus(RequestState.CONFIRMED);
+            event.setConfirmedRequests(event.getConfirmedRequests() + 1);
         } else {
             newRequest.setStatus(RequestState.PENDING);
         }
         Request savedRequest = requestRepository.save(newRequest);
+        eventRepository.save(event);
         log.info("Added request={} ", savedRequest);
         return savedRequest;
     }
@@ -74,7 +77,7 @@ public class RequestServiceImpl implements RequestService {
     public List<Request> getRequests(long userId) {
         log.info("Getting requests from userId={}", userId);
         checkUserExist(userId);
-        List<Request> requests = requestRepository.findAllByInitiatorIdNot(userId);
+        List<Request> requests = requestRepository.findAllByRequesterIdAndEventInitiatorIdNot(userId, userId);
         if (requests == null) {
             return Collections.emptyList();
         }
