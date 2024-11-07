@@ -1,6 +1,5 @@
 package ru.practicum.event.dto.mapper;
 
-import org.mapstruct.InheritInverseConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import ru.practicum.category.dto.mapper.CategoryMapper;
@@ -19,22 +18,12 @@ public interface EventMapper {
     @Mapping(source = "category", target = "category.id")
     Event toEntity(NewEventDto newEventDto);
 
-    Event toEntity(EventFullDto eventFullDto);
-
-    @InheritInverseConfiguration(name = "toEntity")
     EventFullDto toDto(Event event);
 
-    Location toEntity(LocationDto locationDto);
-
-    @InheritInverseConfiguration(name = "toEntity")
     LocationDto toDto(Location location);
 
-    Event toEntity(EventShortDto eventShortDto);
-
-    @InheritInverseConfiguration(name = "toEntity")
     EventShortDto toShortDto(Event event);
 
     @Mapping(source = "categoryId", target = "category.id")
     Event toEntity(UpdateEventAdminRequest updateEventAdminRequest);
-
 }

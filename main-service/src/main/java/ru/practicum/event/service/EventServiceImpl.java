@@ -61,15 +61,15 @@ public class EventServiceImpl implements EventService {
     private final RequestRepository requestRepository;
     private final EventMapper eventMapper;
     private final RequestMapper requestMapper;
-    private final UserService userService;
-    private final CategoryService categoryService;
+    private final UserService userServiceImpl;
+    private final CategoryService categoryServiceImpl;
     private final StatClient statClient;
 
     @Override
     public EventFullDto createEvent(NewEventDto eventDto) {
         log.info("Creating event {}", eventDto);
         User user = checkUserExist(eventDto.getInitiator());
-        Category category = categoryService.getCategoryById(eventDto.getCategory());
+        Category category = categoryServiceImpl.getCategoryById(eventDto.getCategory());
         Location location = locationRepository.save(eventDto.getLocation());
         Event event = eventMapper.toEntity(eventDto);
         event.setCreatedOn(LocalDateTime.now());
@@ -87,7 +87,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventFullDto updateTheEventByTheUser(long userId, long eventId, UpdateEventUserRequest dto) {
-        log.info("Updating event from user with Id {} ", eventId);
+        log.info("Updating event from user with Id {}, dto={} ", eventId, dto);
         User user = checkUserExist(userId);
         Event event = findEventById(eventId);
         if (event.getState() == State.PUBLISHED) {
@@ -114,6 +114,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventShortDto> getUserEvents(long userId, int from, int size) {
         log.info("Getting events for userId {}, with offset from {}, size {} ", userId, from, size);
         checkUserExist(userId);
@@ -125,6 +126,7 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EventFullDto getUserFullEventBuId(long userId, long eventId) {
         log.info("Getting full event with Id {} for userId {}", eventId, userId);
         checkUserExist(userId);
@@ -133,13 +135,12 @@ public class EventServiceImpl implements EventService {
             log.warn("Event with id {} for userId {} , not found", eventId, userId);
             throw new EntityNotFoundException("Event with id " + eventId + "for userId " + userId + " not found");
         }
-
         setViews(List.of(event));
-
         return eventMapper.toDto(event);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventFullDto> getFullEventsForAdmin(List<Long> userIds, List<State> states, List<Long> categories,
                                                     LocalDateTime rangeStart, LocalDateTime rangeEnd,
                                                     int from, int size) {
@@ -150,8 +151,6 @@ public class EventServiceImpl implements EventService {
         Page<Event> eventPage;
         Pageable pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "createdOn"));
         BooleanBuilder queryBuilder = new BooleanBuilder();
-
-
         applyDateRangeFilter(rangeStart, rangeEnd, queryBuilder);
 
         if (userIds != null && !userIds.isEmpty()) {
@@ -176,7 +175,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventFullDto updateEventFromAdmin(long eventId, UpdateEventAdminRequest adminDto) {
-        log.info("Updating event from admin with Id {} ", eventId);
+        log.info("Updating event from admin with Id {}, adminDto={} ", eventId, adminDto);
         Event event = findEventById(eventId);
         if (event.getState() != State.PENDING) {
             log.warn("Event with id {} is not state pending. Cannot perform this operation.", event.getId());
@@ -185,6 +184,8 @@ public class EventServiceImpl implements EventService {
 
         if (adminDto.getEventDate() != null
                 && adminDto.getEventDate().isBefore(event.getPublishedOn().plusHours(1))) {
+            log.warn("The start date of the event to be modified must be no earlier than one hour from" +
+                    " the date of publication");
             throw new ValidationException("The start time of the event to be modified must be no earlier than one hour" +
                     " from the date of publication");
         }
@@ -196,7 +197,7 @@ public class EventServiceImpl implements EventService {
                 default -> throw new InvalidStateException("Invalid state action");
             }
         }
-
+        event.setPublishedOn(LocalDateTime.now());
         Event savedEvent = updateEvent(event, adminDto.getCategoryId(), adminDto.getLocation(), adminDto.getAnnotation(),
                 adminDto.getDescription(), adminDto.getEventDate(), adminDto.getPaid(), adminDto.getParticipantLimit(),
                 adminDto.getRequestModeration(), adminDto.getTitle());
@@ -206,12 +207,13 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventShortDto> getAllShortEventsForPublicUsers(String text, List<Long> categories,
                                                                Boolean paid, LocalDateTime rangeStart,
                                                                LocalDateTime rangeEnd, boolean onlyAvailable,
                                                                String sort, int from, int size) {
-        log.info("Getting events from public users with parameters:" +
-                        " text={}, paid={}, categories={}, rangeStart={}, rangeEnd={}, onlyAvailable= {}, from={}, size={}",
+        log.info("Getting events from public users with parameters: text={}, paid={}, categories={}, rangeStart={}, " +
+                        "rangeEnd={}, onlyAvailable= {}, from={}, size={}",
                 text, paid, categories, rangeStart, rangeEnd, onlyAvailable, from, size);
         Page<Event> eventPage;
         Pageable pageable;
@@ -258,6 +260,7 @@ public class EventServiceImpl implements EventService {
     private void applyDateRangeFilter(LocalDateTime rangeStart, LocalDateTime rangeEnd, BooleanBuilder queryBuilder) {
         if (rangeStart != null && rangeEnd != null) {
             if (rangeStart.isAfter(rangeEnd)) {
+                log.warn("Start time must be not after end time");
                 throw new ValidationException("Start time must be not after end time");
             }
             queryBuilder.and(event.eventDate.between(rangeStart, rangeEnd));
@@ -269,10 +272,13 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public EventFullDto getFullEventByIdForPublicUsers(long eventId) {
+        log.info("Getting full event by id: {}", eventId);
         Event event = findEventById(eventId);
         if (event.getState() != State.PUBLISHED) {
-            throw new EntityNotFoundException("Event not found");
+            log.warn("Event with Id={} not published", eventId);
+            throw new EntityNotFoundException("Event with Id=" + eventId + " not found");
         }
         setViews(List.of(event));
         return eventMapper.toDto(event);
@@ -281,13 +287,15 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventRequestStatusUpdateResult updateParticipationRequestStatus(long userId, long eventId,
                                                                            EventRequestStatusUpdateRequest dto) {
-        log.info("Update Participation Request Status: eventId= {}, \nlistRequest and status= {}", eventId, dto);
+        log.info("Update Participation Request Status: eventId= {}, status= {}", eventId, dto.getStatus());
         checkUserExist(userId);
         Event event = findEventById(eventId);
         if (event.getParticipantLimit() == 0 || !event.getRequestModeration()) {
+            log.warn("Confirmation of applications is not required");
             throw new ValidationException("Confirmation of applications is not required");
         }
         if (Objects.equals(event.getConfirmedRequests(), event.getParticipantLimit())) {
+            log.warn("Quantity Participant Limit is full");
             throw new InvalidStateException("Quantity Participant Limit is full");
         }
         int quantityParticipantLimit = event.getConfirmedRequests();
@@ -335,19 +343,19 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ParticipationRequestDto> getAllParticipationRequestForUserFromEvent(long userId, long eventId) {
         checkUserExist(userId);
-        findEventById(userId);
-        return requestRepository.findAllByEventId(eventId)
+        findEventById(eventId);
+        return requestRepository.findByEventId(eventId)
                 .stream().map(requestMapper::toDto).toList();
     }
 
-    private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String
-            description,
+    private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String description,
                               LocalDateTime eventDate, Boolean paid, Integer participantLimit,
                               Boolean requestModeration, String title) {
         if (categoryId != null) {
-            Category category = categoryService.getCategoryById(categoryId);
+            Category category = categoryServiceImpl.getCategoryById(categoryId);
             event.setCategory(category);
         }
         if (location != null) {
@@ -380,7 +388,7 @@ public class EventServiceImpl implements EventService {
     }
 
     private User checkUserExist(long userId) {
-        return userService.getUserById(userId);
+        return userServiceImpl.getUserById(userId);
     }
 
     private List<ViewStats> getViews(List<Event> events) {

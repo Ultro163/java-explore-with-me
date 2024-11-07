@@ -48,5 +48,4 @@ public class EventAdminController {
                                              @Valid @RequestBody UpdateEventAdminRequest dto) {
         return eventServiceImpl.updateEventFromAdmin(eventId, dto);
     }
-
 }

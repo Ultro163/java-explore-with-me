@@ -9,8 +9,7 @@ import ru.practicum.category.model.Category;
 public interface CategoryMapper {
     Category toEntity(CategoryDto categoryDto);
 
-    CategoryDto toDto(Category category);
+    CategoryDto toCategoryDto(Category category);
 
     Category toEntity(CategoryRequestDto categoryRequestDto);
-
 }

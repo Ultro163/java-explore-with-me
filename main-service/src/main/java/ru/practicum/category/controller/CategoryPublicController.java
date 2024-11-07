@@ -23,11 +23,11 @@ public class CategoryPublicController {
     public List<CategoryDto> getCategoriesWithPagination(@RequestParam(defaultValue = "0") int from,
                                                          @RequestParam(defaultValue = "10") int size) {
         return categoryService.getCategoriesWithPagination(from, size).stream()
-                .map(mapper::toDto).toList();
+                .map(mapper::toCategoryDto).toList();
     }
 
     @GetMapping("/{catId}")
     public CategoryDto getCategoryById(@PathVariable long catId) {
-        return mapper.toDto(categoryService.getCategoryById(catId));
+        return mapper.toCategoryDto(categoryService.getCategoryById(catId));
     }
 }

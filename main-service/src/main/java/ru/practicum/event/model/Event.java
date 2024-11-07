@@ -35,12 +35,12 @@ public class Event {
     private Long id;
 
     @Column(name = "annotation", length = Integer.MAX_VALUE)
-    @ToString.Exclude
     private String annotation;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
+    @ToString.Exclude
     private Category category;
 
     @Column(name = "confirmed_requests")
@@ -50,7 +50,6 @@ public class Event {
     private LocalDateTime createdOn;
 
     @Column(name = "description", length = Integer.MAX_VALUE)
-    @ToString.Exclude
     private String description;
 
     @Column(name = "event_date")
@@ -58,10 +57,12 @@ public class Event {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "initiator_id")
+    @ToString.Exclude
     private User initiator;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "location_id")
+    @ToString.Exclude
     private Location location;
 
     @Column(name = "paid")

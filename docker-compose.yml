@@ -35,5 +35,27 @@ services:
     container_name: main-service
     ports:
       - "8080:8080"
+    depends_on:
+      - main-db
     environment:
+      - TZ=Europe/Samara
+      - PGTZ=Europe/Samara
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://main-db:5432/main-service
+      - SPRING_DATASOURCE_USERNAME=ultro
+      - SPRING_DATASOURCE_PASSWORD=163163
       - MY_SERVER_URL=http://stat-server:9090
+
+  main-db:
+    image: postgres:16.1
+    container_name: postgres-main
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_PASSWORD=163163
+      - POSTGRES_USER=ultro
+      - POSTGRES_DB=main-service
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10

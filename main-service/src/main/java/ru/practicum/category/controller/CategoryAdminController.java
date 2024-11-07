@@ -28,14 +28,14 @@ public class CategoryAdminController {
     @ResponseStatus(HttpStatus.CREATED)
     public CategoryDto createCategory(@Valid @RequestBody CategoryRequestDto dto) {
         Category category = mapper.toEntity(dto);
-        return mapper.toDto(categoryService.createCategory(category));
+        return mapper.toCategoryDto(categoryService.createCategory(category));
     }
 
     @PatchMapping("/{catId}")
     public CategoryDto updateCategory(@PathVariable long catId, @Valid @RequestBody CategoryRequestDto dto) {
         Category category = mapper.toEntity(dto);
         category.setId(catId);
-        return mapper.toDto(categoryService.updateCategory(category));
+        return mapper.toCategoryDto(categoryService.updateCategory(category));
     }
 
     @DeleteMapping("/{catId}")
