@@ -35,19 +35,24 @@ public class RequestServiceImpl implements RequestService {
         log.info("Adding request for eventId={} from userId={}", eventId, userId);
         User user = checkUserExist(userId);
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event with ID=" + eventId + " not found"));
+                .orElseThrow(() -> {
+                    log.warn("Event with ID={} not found", eventId);
+                    return new EntityNotFoundException("Event with ID=" + eventId + " not found");
+                });
         if (userId == event.getInitiator().getId()) {
+            log.warn("A user with ID={} cannot add a request to their event", userId);
             throw new SelfParticipationException("You cannot add a request to your event");
         }
         checkParticipationRequestExists(userId, eventId);
         if (event.getState() != State.PUBLISHED) {
+            log.warn("Event with ID={} has not published", eventId);
             throw new InvalidStateException("Event has not published");
         }
         int quantityParticipantWithNewRequest = event.getConfirmedRequests() + 1;
-        System.out.println(quantityParticipantWithNewRequest);
 
         if (event.getParticipantLimit() != 0
                 && quantityParticipantWithNewRequest > event.getParticipantLimit()) {
+            log.warn("Event with ID={} has reached the full number of participants", eventId);
             throw new InvalidStateException("The event has reached the full number of participants");
         }
         Request newRequest = new Request();
@@ -69,11 +74,13 @@ public class RequestServiceImpl implements RequestService {
     private void checkParticipationRequestExists(long userId, long eventId) {
         requestRepository.findByRequesterIdAndEventId(userId, eventId)
                 .ifPresent(request -> {
+                    log.warn("Request by userId={} already exists", userId);
                     throw new DuplicateParticipationRequestException("Request already exists");
                 });
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Request> getRequests(long userId) {
         log.info("Getting requests from userId={}", userId);
         checkUserExist(userId);
@@ -88,8 +95,11 @@ public class RequestServiceImpl implements RequestService {
     public Request updateRequest(long userId, long requestId) {
         log.info("Updating request with id={} from userId={}", requestId, userId);
         Request request = requestRepository.findByIdAndRequesterId(requestId, userId)
-                .orElseThrow(() -> new EntityNotFoundException("Request with id=" + requestId +
-                        " from userId=" + userId + " not found"));
+                .orElseThrow(() -> {
+                    log.warn("Request with id={}, from userId= {} not found", requestId, userId);
+                    return new EntityNotFoundException("Request with id=" + requestId +
+                            " from userId=" + userId + " not found");
+                });
         request.setStatus(RequestState.CANCELED);
         return requestRepository.save(request);
     }

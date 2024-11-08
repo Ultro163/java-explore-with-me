@@ -32,11 +32,10 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public List<User> findUsersWithPagination(List<Integer> ids, int from, int size) {
         log.info("Getting users with params");
+        log.debug("Create Pageable with offset from {}, size {}", from, size);
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
         if (ids == null || ids.isEmpty()) {
             log.info("Get users with offset from {}, size {}", from, size);
-            log.debug("Create Pageable with offset from {}, size {}", from, size);
-
             return userRepository.findAll(pageable).getContent();
         } else {
             log.info("Get users with ids {}", ids);

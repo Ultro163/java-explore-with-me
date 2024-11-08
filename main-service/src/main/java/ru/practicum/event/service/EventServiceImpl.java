@@ -253,7 +253,6 @@ public class EventServiceImpl implements EventService {
         if (sort != null && sort.equals("VIEWS")) {
             result = result.stream().sorted(Comparator.comparingLong(Event::getViews)).toList();
         }
-
         return result.stream().map(eventMapper::toShortDto).toList();
     }
 
