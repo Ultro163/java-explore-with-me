@@ -44,4 +44,6 @@ public interface EventService {
                                                                     EventRequestStatusUpdateRequest dto);
 
     List<ParticipationRequestDto> getAllParticipationRequestForUserFromEvent(long userId, long eventId);
+
+    void evaluationForEventByUser(long userId, long eventId, String reaction);
 }

@@ -8,6 +8,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.error.exception.EntityNotFoundException;
+import ru.practicum.user.dto.UserDto;
+import ru.practicum.user.dto.mapper.UserMapper;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
@@ -19,6 +21,7 @@ import java.util.List;
 @Transactional
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final UserMapper mapper;
 
     @Override
     public User creat(User user) {
@@ -30,16 +33,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<User> findUsersWithPagination(List<Integer> ids, int from, int size) {
+    public List<UserDto> findUsersWithPagination(List<Integer> ids, int from, int size) {
         log.info("Getting users with params");
         log.debug("Create Pageable with offset from {}, size {}", from, size);
         Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
         if (ids == null || ids.isEmpty()) {
             log.info("Get users with offset from {}, size {}", from, size);
-            return userRepository.findAll(pageable).getContent();
+            return userRepository.findAll(pageable).getContent().stream().map(mapper::toDto).toList();
         } else {
             log.info("Get users with ids {}", ids);
-            return userRepository.findByIds(ids, pageable);
+            return userRepository.findByIds(ids, pageable).stream().map(mapper::toDto).toList();
         }
     }
 

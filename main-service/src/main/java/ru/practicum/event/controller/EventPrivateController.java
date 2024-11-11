@@ -71,4 +71,10 @@ public class EventPrivateController {
                                                                                     @PathVariable long eventId) {
         return eventService.getAllParticipationRequestForUserFromEvent(userId, eventId);
     }
+
+    @PostMapping("/{eventId}/reactions")
+    public void evaluationForEventByUser(@PathVariable long userId, @PathVariable long eventId,
+                                         @RequestParam String reaction) {
+        eventService.evaluationForEventByUser(userId, eventId, reaction);
+    }
 }

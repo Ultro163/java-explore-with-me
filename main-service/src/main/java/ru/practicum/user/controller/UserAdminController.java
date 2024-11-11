@@ -40,7 +40,7 @@ public class UserAdminController {
     public List<UserDto> findUsersWithPagination(@RequestParam(required = false) List<Integer> ids,
                                                  @RequestParam(defaultValue = "0") int from,
                                                  @RequestParam(defaultValue = "10") int size) {
-        return userServiceImpl.findUsersWithPagination(ids, from, size).stream().map(mapper::toDto).toList();
+        return userServiceImpl.findUsersWithPagination(ids, from, size);
     }
 
     @DeleteMapping("/{userId}")

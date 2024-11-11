@@ -26,8 +26,11 @@ import ru.practicum.event.dto.UpdateEventAdminRequest;
 import ru.practicum.event.dto.UpdateEventUserRequest;
 import ru.practicum.event.dto.mapper.EventMapper;
 import ru.practicum.event.model.Event;
+import ru.practicum.event.model.EventLike;
+import ru.practicum.event.model.EventReaction;
 import ru.practicum.event.model.Location;
 import ru.practicum.event.model.State;
+import ru.practicum.event.repository.EventLikeRepository;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.event.repository.LocationRepository;
 import ru.practicum.request.dto.ParticipationRequestDto;
@@ -59,6 +62,7 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final LocationRepository locationRepository;
     private final RequestRepository requestRepository;
+    private final EventLikeRepository eventLikeRepository;
     private final EventMapper eventMapper;
     private final RequestMapper requestMapper;
     private final UserService userServiceImpl;
@@ -250,6 +254,7 @@ public class EventServiceImpl implements EventService {
         }
         List<Event> result = eventPage.getContent();
         setViews(result);
+        result.forEach(event -> event.setRating(event.getRating()));
         if (sort != null && sort.equals("VIEWS")) {
             result = result.stream().sorted(Comparator.comparingLong(Event::getViews)).toList();
         }
@@ -348,6 +353,32 @@ public class EventServiceImpl implements EventService {
         findEventById(eventId);
         return requestRepository.findByEventId(eventId)
                 .stream().map(requestMapper::toDto).toList();
+    }
+
+    @Override
+    public void evaluationForEventByUser(long userId, long eventId, String reaction) {
+        log.info("Evaluating for event by id: {}, userId= {}, reaction={}", eventId, userId, reaction);
+        EventReaction eventReaction = EventReaction.fromString(reaction);
+        Event event = findEventById(eventId);
+        User user = checkUserExist(userId);
+        EventLike existingEventLike = eventLikeRepository.findByUserIdAndEventId(userId, eventId);
+        if (existingEventLike != null) {
+            if (existingEventLike.getReaction() == eventReaction) {
+                eventLikeRepository.delete(existingEventLike);
+            } else {
+                existingEventLike.setUser(user);
+                existingEventLike.setEvent(event);
+                existingEventLike.setReaction(eventReaction);
+                eventLikeRepository.save(existingEventLike);
+            }
+        } else {
+            EventLike eventLike = new EventLike();
+            eventLike.setUser(user);
+            eventLike.setEvent(event);
+            eventLike.setReaction(eventReaction);
+            eventLikeRepository.save(eventLike);
+        }
+        log.info("Evaluating for event has been made");
     }
 
     private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String description,
