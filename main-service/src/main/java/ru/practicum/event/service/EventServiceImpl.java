@@ -33,13 +33,14 @@ import ru.practicum.event.model.State;
 import ru.practicum.event.repository.EventLikeRepository;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.event.repository.LocationRepository;
+import ru.practicum.event.util.CalculateRating;
 import ru.practicum.request.dto.ParticipationRequestDto;
 import ru.practicum.request.dto.mapper.RequestMapper;
 import ru.practicum.request.model.Request;
 import ru.practicum.request.model.RequestState;
 import ru.practicum.request.repositroy.RequestRepository;
 import ru.practicum.user.model.User;
-import ru.practicum.user.service.UserService;
+import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -65,7 +66,7 @@ public class EventServiceImpl implements EventService {
     private final EventLikeRepository eventLikeRepository;
     private final EventMapper eventMapper;
     private final RequestMapper requestMapper;
-    private final UserService userServiceImpl;
+    private final UserRepository userRepository;
     private final CategoryService categoryServiceImpl;
     private final StatClient statClient;
 
@@ -359,15 +360,16 @@ public class EventServiceImpl implements EventService {
     public void evaluationForEventByUser(long userId, long eventId, String reaction) {
         log.info("Evaluating for event by id: {}, userId= {}, reaction={}", eventId, userId, reaction);
         EventReaction eventReaction = EventReaction.fromString(reaction);
-        Event event = findEventById(eventId);
+        Event event = eventRepository.findByIdFetch(eventId).orElseThrow(() -> {
+            log.warn("EventId={} not found", eventId);
+            return new EntityNotFoundException("Event with id " + eventId + " not found");
+        });
         User user = checkUserExist(userId);
         EventLike existingEventLike = eventLikeRepository.findByUserIdAndEventId(userId, eventId);
         if (existingEventLike != null) {
             if (existingEventLike.getReaction() == eventReaction) {
                 eventLikeRepository.delete(existingEventLike);
             } else {
-                existingEventLike.setUser(user);
-                existingEventLike.setEvent(event);
                 existingEventLike.setReaction(eventReaction);
                 eventLikeRepository.save(existingEventLike);
             }
@@ -378,7 +380,18 @@ public class EventServiceImpl implements EventService {
             eventLike.setReaction(eventReaction);
             eventLikeRepository.save(eventLike);
         }
+        updateUserRating(event.getInitiator().getId());
         log.info("Evaluating for event has been made");
+    }
+
+    private void updateUserRating(long userId) {
+        log.info("Updating rating for userId={}", userId);
+        List<Event> usersEvents = eventRepository.findAllByInitiatorIdForLike(userId);
+        List<Long> eventIds = usersEvents.stream().map(Event::getId).toList();
+        List<EventLike> usersLike = eventLikeRepository.findAllForUser(eventIds);
+        double rating = CalculateRating.calculateRating(usersLike);
+        userRepository.updateUserRating(userId, rating);
+        log.info("Updated rating={} for userId={}", rating, userId);
     }
 
     private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String description,
@@ -419,7 +432,12 @@ public class EventServiceImpl implements EventService {
     }
 
     private User checkUserExist(long userId) {
-        return userServiceImpl.getUserById(userId);
+        log.info("Getting user with ID = {}", userId);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User with ID {} not found", userId);
+                    return new EntityNotFoundException("User with ID " + userId + " not found");
+                });
     }
 
     private List<ViewStats> getViews(List<Event> events) {

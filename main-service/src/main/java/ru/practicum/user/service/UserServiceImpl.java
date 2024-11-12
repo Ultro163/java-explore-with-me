@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.error.exception.EntityNotFoundException;
+import ru.practicum.error.exception.ValidationException;
 import ru.practicum.user.dto.UserDto;
 import ru.practicum.user.dto.mapper.UserMapper;
 import ru.practicum.user.model.User;
@@ -26,6 +27,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User creat(User user) {
         log.info("Creating user {}", user);
+        user.setRating(0.0);
         User resultUser = userRepository.save(user);
         log.info("Created user {}", resultUser);
         return resultUser;
@@ -33,10 +35,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserDto> findUsersWithPagination(List<Integer> ids, int from, int size) {
+    public List<UserDto> findUsersWithPagination(List<Integer> ids, int from, int size, String sort) {
         log.info("Getting users with params");
-        log.debug("Create Pageable with offset from {}, size {}", from, size);
-        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
+        log.debug("Create Pageable with offset from {}, size {}, sort={}", from, size, sort);
+        Pageable pageable;
+        switch (sort) {
+            case "RATING" -> pageable = PageRequest.of(from / size, size,
+                    Sort.by(Sort.Direction.DESC, "rating"));
+            case null -> pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
+            default -> throw new ValidationException("Sort is not supported: " + sort.toLowerCase());
+        }
         if (ids == null || ids.isEmpty()) {
             log.info("Get users with offset from {}, size {}", from, size);
             return userRepository.findAll(pageable).getContent().stream().map(mapper::toDto).toList();

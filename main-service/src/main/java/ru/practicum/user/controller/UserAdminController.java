@@ -39,8 +39,9 @@ public class UserAdminController {
     @GetMapping
     public List<UserDto> findUsersWithPagination(@RequestParam(required = false) List<Integer> ids,
                                                  @RequestParam(defaultValue = "0") int from,
-                                                 @RequestParam(defaultValue = "10") int size) {
-        return userServiceImpl.findUsersWithPagination(ids, from, size);
+                                                 @RequestParam(defaultValue = "10") int size,
+                                                 @RequestParam(required = false) String sort) {
+        return userServiceImpl.findUsersWithPagination(ids, from, size, sort);
     }
 
     @DeleteMapping("/{userId}")

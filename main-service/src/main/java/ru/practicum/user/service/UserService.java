@@ -9,7 +9,7 @@ public interface UserService {
 
     User creat(User dto);
 
-    List<UserDto> findUsersWithPagination(List<Integer> ids, int from, int size);
+    List<UserDto> findUsersWithPagination(List<Integer> ids, int from, int size, String sort);
 
     void delete(long userId);
 

@@ -97,7 +97,6 @@ public class Event {
     @Transient
     private Long views;
 
-
     public Double getRating() {
         return CalculateRating.calculateRating(likes);
     }
