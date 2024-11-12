@@ -87,7 +87,7 @@ public class Event {
     @Column(name = "title", length = Integer.MAX_VALUE)
     private String title;
 
-    @OneToMany(fetch = FetchType.EAGER, mappedBy = "event")
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "event")
     @ToString.Exclude
     private List<EventLike> likes = new ArrayList<>();
 
