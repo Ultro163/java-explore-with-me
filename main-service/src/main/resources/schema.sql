@@ -1,11 +1,11 @@
--- DROP TABLE IF EXISTS requests;
--- DROP TABLE IF EXISTS event_likes;
--- DROP TABLE IF EXISTS compilation_event;
--- DROP TABLE IF EXISTS events;
--- DROP TABLE IF EXISTS users;
--- DROP TABLE IF EXISTS categories;
--- DROP TABLE IF EXISTS locations;
--- DROP TABLE IF EXISTS compilation;
+DROP TABLE IF EXISTS requests;
+DROP TABLE IF EXISTS event_likes;
+DROP TABLE IF EXISTS compilation_event;
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS compilation;
 
 CREATE TABLE IF NOT EXISTS users
 (

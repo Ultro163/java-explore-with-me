@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.error.exception.EntityNotFoundException;
+import ru.practicum.error.exception.InvalidStateException;
 import ru.practicum.error.exception.ValidationException;
 import ru.practicum.event.model.Event;
-import ru.practicum.like.model.EventReaction;
+import ru.practicum.event.model.State;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.like.model.EventLike;
+import ru.practicum.like.model.EventReaction;
 import ru.practicum.like.repository.LikeRepository;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
@@ -28,6 +30,9 @@ public class LikeServiceImpl implements LikeService {
         log.info("Evaluating for event by id: {}, userId= {}, reaction={}", eventId, userId, reaction);
         EventReaction eventReaction = EventReaction.fromString(reaction);
         Event event = findEventById(eventId);
+        if (event.getState() != State.PUBLISHED) {
+            throw new InvalidStateException("Event is not published");
+        }
         User user = checkUserExist(userId);
         EventLike existingEventLike = likeRepository.findByUserIdAndEventId(userId, eventId).orElse(null);
         if (existingEventLike != null) {

@@ -220,7 +220,7 @@ public class EventServiceImpl implements EventService {
             case "EVENT_DATE" -> pageable = createPageable(from, size,
                     Sort.by(Sort.Direction.ASC, "eventDate"));
             case "VIEWS", "RATING" -> pageable = createPageable(from, size,
-                    Sort.by(Sort.Direction.ASC, "id"));
+                    Sort.unsorted());
             case null -> pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "id"));
             default -> throw new ValidationException("Sort is not supported");
         }
