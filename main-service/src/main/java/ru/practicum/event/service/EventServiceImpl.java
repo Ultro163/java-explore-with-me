@@ -26,14 +26,10 @@ import ru.practicum.event.dto.UpdateEventAdminRequest;
 import ru.practicum.event.dto.UpdateEventUserRequest;
 import ru.practicum.event.dto.mapper.EventMapper;
 import ru.practicum.event.model.Event;
-import ru.practicum.event.model.EventLike;
-import ru.practicum.event.model.EventReaction;
 import ru.practicum.event.model.Location;
 import ru.practicum.event.model.State;
-import ru.practicum.event.repository.EventLikeRepository;
 import ru.practicum.event.repository.EventRepository;
 import ru.practicum.event.repository.LocationRepository;
-import ru.practicum.event.util.CalculateRating;
 import ru.practicum.request.dto.ParticipationRequestDto;
 import ru.practicum.request.dto.mapper.RequestMapper;
 import ru.practicum.request.model.Request;
@@ -63,7 +59,6 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final LocationRepository locationRepository;
     private final RequestRepository requestRepository;
-    private final EventLikeRepository eventLikeRepository;
     private final EventMapper eventMapper;
     private final RequestMapper requestMapper;
     private final UserRepository userRepository;
@@ -354,44 +349,6 @@ public class EventServiceImpl implements EventService {
         findEventById(eventId);
         return requestRepository.findByEventId(eventId)
                 .stream().map(requestMapper::toDto).toList();
-    }
-
-    @Override
-    public void evaluationForEventByUser(long userId, long eventId, String reaction) {
-        log.info("Evaluating for event by id: {}, userId= {}, reaction={}", eventId, userId, reaction);
-        EventReaction eventReaction = EventReaction.fromString(reaction);
-        Event event = eventRepository.findByIdFetch(eventId).orElseThrow(() -> {
-            log.warn("EventId={} not found", eventId);
-            return new EntityNotFoundException("Event with id " + eventId + " not found");
-        });
-        User user = checkUserExist(userId);
-        EventLike existingEventLike = eventLikeRepository.findByUserIdAndEventId(userId, eventId);
-        if (existingEventLike != null) {
-            if (existingEventLike.getReaction() == eventReaction) {
-                eventLikeRepository.delete(existingEventLike);
-            } else {
-                existingEventLike.setReaction(eventReaction);
-                eventLikeRepository.save(existingEventLike);
-            }
-        } else {
-            EventLike eventLike = new EventLike();
-            eventLike.setUser(user);
-            eventLike.setEvent(event);
-            eventLike.setReaction(eventReaction);
-            eventLikeRepository.save(eventLike);
-        }
-        updateUserRating(event.getInitiator().getId());
-        log.info("Evaluating for event has been made");
-    }
-
-    private void updateUserRating(long userId) {
-        log.info("Updating rating for userId={}", userId);
-        List<Event> usersEvents = eventRepository.findAllByInitiatorIdForLike(userId);
-        List<Long> eventIds = usersEvents.stream().map(Event::getId).toList();
-        List<EventLike> usersLike = eventLikeRepository.findAllForUser(eventIds);
-        double rating = CalculateRating.calculateRating(usersLike);
-        userRepository.updateUserRating(userId, rating);
-        log.info("Updated rating={} for userId={}", rating, userId);
     }
 
     private Event updateEvent(Event event, Long categoryId, Location location, String annotation, String description,

@@ -1,4 +1,4 @@
-package ru.practicum.event.model;
+package ru.practicum.like.model;
 
 import ru.practicum.error.exception.ValidationException;
 

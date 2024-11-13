@@ -9,12 +9,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.error.exception.EntityNotFoundException;
 import ru.practicum.error.exception.ValidationException;
+import ru.practicum.event.util.CalculateRating;
+import ru.practicum.like.dto.RatingDto;
+import ru.practicum.like.model.EventLike;
+import ru.practicum.like.repository.LikeRepository;
 import ru.practicum.user.dto.UserDto;
 import ru.practicum.user.dto.mapper.UserMapper;
 import ru.practicum.user.model.User;
 import ru.practicum.user.repository.UserRepository;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -22,12 +31,12 @@ import java.util.List;
 @Transactional
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final LikeRepository likeRepository;
     private final UserMapper mapper;
 
     @Override
     public User creat(User user) {
         log.info("Creating user {}", user);
-        user.setRating(0.0);
         User resultUser = userRepository.save(user);
         log.info("Created user {}", resultUser);
         return resultUser;
@@ -38,19 +47,50 @@ public class UserServiceImpl implements UserService {
     public List<UserDto> findUsersWithPagination(List<Integer> ids, int from, int size, String sort) {
         log.info("Getting users with params");
         log.debug("Create Pageable with offset from {}, size {}, sort={}", from, size, sort);
-        Pageable pageable;
+        Pageable pageable = Pageable.unpaged();
+        boolean sortRating = false;
         switch (sort) {
-            case "RATING" -> pageable = PageRequest.of(from / size, size,
-                    Sort.by(Sort.Direction.DESC, "rating"));
+            case "RATING" -> sortRating = true;
             case null -> pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
             default -> throw new ValidationException("Sort is not supported: " + sort.toLowerCase());
         }
+
         if (ids == null || ids.isEmpty()) {
             log.info("Get users with offset from {}, size {}", from, size);
-            return userRepository.findAll(pageable).getContent().stream().map(mapper::toDto).toList();
+            List<User> users = userRepository.findAll(pageable).getContent();
+            settingUsersRating(users);
+            if (sortRating) {
+                users = users.stream().sorted(Comparator.comparingDouble(User::getRating).reversed()).toList();
+            }
+            return users.stream().map(mapper::toDto).toList();
         } else {
             log.info("Get users with ids {}", ids);
-            return userRepository.findByIds(ids, pageable).stream().map(mapper::toDto).toList();
+            List<User> users = userRepository.findByIds(ids, pageable);
+            settingUsersRating(users);
+            if (sortRating) {
+                users = users.stream().sorted(Comparator.comparingDouble(User::getRating).reversed()).toList();
+            }
+            return users.stream().map(mapper::toDto).toList();
+        }
+    }
+
+    private void settingUsersRating(List<User> users) {
+        List<Long> userIds = users.stream().map(User::getId).toList();
+        Map<Long, List<EventLike>> mapUserLikes = likeRepository.findLikes(userIds).stream()
+                .collect(Collectors.groupingBy(
+                        RatingDto::getUserId,
+                        Collectors.mapping(
+                                RatingDto::getEventLike,
+                                Collectors.collectingAndThen(
+                                        Collectors.toList(),
+                                        list -> list.stream().filter(Objects::nonNull).collect(Collectors.toList())
+                                )
+                        )
+                ));
+        for (User user : users) {
+            List<EventLike> eventLikes = mapUserLikes.getOrDefault(user.getId(), Collections.emptyList());
+            double rating = CalculateRating.calculateRating(eventLikes);
+            user.setRating(rating);
         }
     }
 

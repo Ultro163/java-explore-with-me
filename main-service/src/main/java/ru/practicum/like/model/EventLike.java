@@ -1,4 +1,4 @@
-package ru.practicum.event.model;
+package ru.practicum.like.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import ru.practicum.event.model.Event;
 import ru.practicum.user.model.User;
 
 @Entity

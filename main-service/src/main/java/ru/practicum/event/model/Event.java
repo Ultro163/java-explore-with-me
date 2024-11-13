@@ -20,6 +20,7 @@ import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 import ru.practicum.category.model.Category;
 import ru.practicum.event.util.CalculateRating;
+import ru.practicum.like.model.EventLike;
 import ru.practicum.user.model.User;
 
 import java.time.LocalDateTime;

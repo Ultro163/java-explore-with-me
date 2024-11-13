@@ -1,7 +1,7 @@
 package ru.practicum.event.util;
 
 import org.springframework.stereotype.Component;
-import ru.practicum.event.model.EventLike;
+import ru.practicum.like.model.EventLike;
 
 import java.util.List;
 
@@ -14,9 +14,9 @@ public class CalculateRating {
         }
 
         long likeCount = likes.stream()
-                .filter(l -> "like".equalsIgnoreCase(String.valueOf(l.getReaction()))).count();
+                .filter(l -> l.getReaction() != null && "like".equalsIgnoreCase(String.valueOf(l.getReaction()))).count();
         long dislikeCount = likes.stream()
-                .filter(l -> "dislike".equalsIgnoreCase(String.valueOf(l.getReaction()))).count();
+                .filter(l -> l.getReaction() != null && "dislike".equalsIgnoreCase(String.valueOf(l.getReaction()))).count();
         long total = likeCount + dislikeCount;
 
         double rating = total == 0 ? 0.0 : 10.0 * likeCount / total;
