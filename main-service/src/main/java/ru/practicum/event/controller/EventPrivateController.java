@@ -71,6 +71,4 @@ public class EventPrivateController {
                                                                                     @PathVariable long eventId) {
         return eventService.getAllParticipationRequestForUserFromEvent(userId, eventId);
     }
-
-
 }
