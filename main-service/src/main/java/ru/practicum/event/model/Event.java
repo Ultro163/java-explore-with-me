@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotNull;
@@ -18,9 +19,13 @@ import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.proxy.HibernateProxy;
 import ru.practicum.category.model.Category;
+import ru.practicum.event.util.CalculateRating;
+import ru.practicum.like.model.EventLike;
 import ru.practicum.user.model.User;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Getter
@@ -83,8 +88,19 @@ public class Event {
     @Column(name = "title", length = Integer.MAX_VALUE)
     private String title;
 
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "event")
+    @ToString.Exclude
+    private List<EventLike> likes = new ArrayList<>();
+
+    @Transient
+    private Double rating;
+
     @Transient
     private Long views;
+
+    public Double getRating() {
+        return CalculateRating.calculateRating(likes);
+    }
 
     @Override
     public final boolean equals(Object o) {

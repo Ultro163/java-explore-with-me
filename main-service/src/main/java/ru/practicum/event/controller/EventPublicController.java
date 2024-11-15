@@ -50,4 +50,5 @@ public class EventPublicController {
         statClient.save("ewm-main-service", request);
         return eventServiceImpl.getFullEventByIdForPublicUsers(eventId);
     }
+
 }

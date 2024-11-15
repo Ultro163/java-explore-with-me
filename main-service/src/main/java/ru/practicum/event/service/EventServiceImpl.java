@@ -36,7 +36,7 @@ import ru.practicum.request.model.Request;
 import ru.practicum.request.model.RequestState;
 import ru.practicum.request.repositroy.RequestRepository;
 import ru.practicum.user.model.User;
-import ru.practicum.user.service.UserService;
+import ru.practicum.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -61,7 +61,7 @@ public class EventServiceImpl implements EventService {
     private final RequestRepository requestRepository;
     private final EventMapper eventMapper;
     private final RequestMapper requestMapper;
-    private final UserService userServiceImpl;
+    private final UserRepository userRepository;
     private final CategoryService categoryServiceImpl;
     private final StatClient statClient;
 
@@ -118,7 +118,7 @@ public class EventServiceImpl implements EventService {
     public List<EventShortDto> getUserEvents(long userId, int from, int size) {
         log.info("Getting events for userId {}, with offset from {}, size {} ", userId, from, size);
         checkUserExist(userId);
-        Pageable pageable = createPageable(from / size, size, Sort.by(Sort.Direction.ASC, "createdOn"));
+        Pageable pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "createdOn"));
         List<Event> result = eventRepository.findAllByInitiatorId(userId, pageable);
         log.info("Found {} events", result.size());
         setViews(result);
@@ -215,17 +215,17 @@ public class EventServiceImpl implements EventService {
         log.info("Getting events from public users with parameters: text={}, paid={}, categories={}, rangeStart={}, " +
                         "rangeEnd={}, onlyAvailable= {}, from={}, size={}",
                 text, paid, categories, rangeStart, rangeEnd, onlyAvailable, from, size);
-        Page<Event> eventPage;
         Pageable pageable;
         switch (sort) {
             case "EVENT_DATE" -> pageable = createPageable(from, size,
                     Sort.by(Sort.Direction.ASC, "eventDate"));
-            case "VIEWS" -> pageable = createPageable(from, size,
-                    Sort.by(Sort.Direction.ASC, "id"));
-            case null -> pageable = createPageable(from, size, Sort.unsorted());
+            case "VIEWS", "RATING" -> pageable = createPageable(from, size,
+                    Sort.unsorted());
+            case null -> pageable = createPageable(from, size, Sort.by(Sort.Direction.ASC, "id"));
             default -> throw new ValidationException("Sort is not supported");
         }
         BooleanBuilder queryBuilder = new BooleanBuilder();
+        queryBuilder.and(event.state.eq(State.PUBLISHED));
 
         applyDateRangeFilter(rangeStart, rangeEnd, queryBuilder);
 
@@ -243,15 +243,16 @@ public class EventServiceImpl implements EventService {
             queryBuilder.and(event.participantLimit.eq(0)
                     .or(event.confirmedRequests.lt(event.participantLimit)));
         }
-        if (queryBuilder.getValue() != null) {
-            eventPage = eventRepository.findAll(queryBuilder, pageable);
-        } else {
-            eventPage = eventRepository.findAll(pageable);
-        }
-        List<Event> result = eventPage.getContent();
+
+        List<Event> result = eventRepository.findAll(queryBuilder, pageable).getContent();
         setViews(result);
+        result.forEach(event -> event.setRating(event.getRating()));
         if (sort != null && sort.equals("VIEWS")) {
             result = result.stream().sorted(Comparator.comparingLong(Event::getViews)).toList();
+        }
+        if (sort != null && sort.equals("RATING")) {
+            result = result.stream().sorted(Comparator.comparingDouble(Event::getRating))
+                    .toList().reversed();
         }
         return result.stream().map(eventMapper::toShortDto).toList();
     }
@@ -383,11 +384,17 @@ public class EventServiceImpl implements EventService {
 
     private Pageable createPageable(int from, int size, Sort sort) {
         log.debug("Create Pageable with offset from {}, size {}", from, size);
-        return PageRequest.of(from / size, size, sort);
+        int pageNumber = from / size;
+        return PageRequest.of(pageNumber, size, sort);
     }
 
     private User checkUserExist(long userId) {
-        return userServiceImpl.getUserById(userId);
+        log.info("Getting user with ID = {}", userId);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User with ID {} not found", userId);
+                    return new EntityNotFoundException("User with ID " + userId + " not found");
+                });
     }
 
     private List<ViewStats> getViews(List<Event> events) {

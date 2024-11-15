@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,6 +32,8 @@ public class User {
     private String name;
     @Column(unique = true, nullable = false)
     private String email;
+    @Transient
+    private Double rating;
 
     @Override
     public final boolean equals(Object o) {
